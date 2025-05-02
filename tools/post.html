@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini Postman</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .container {
+      width: 400px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    input, button, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    textarea {
+      resize: vertical;
+      height: 150px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Mini Postman</h2>
+    
+    <label for="url">URL</label>
+    <input type="text" id="url" placeholder="Enter URL" value="https://jsonplaceholder.typicode.com/posts">
+    
+    <label for="method">Method</label>
+    <select id="method">
+      <option value="GET">GET</option>
+      <option value="POST">POST</option>
+    </select>
+    
+    <label for="body">Request Body (JSON)</label>
+    <textarea id="body" placeholder="Enter JSON body for POST requests"></textarea>
+    
+    <button onclick="sendRequest()">Send Request</button>
+    
+    <h3>Response:</h3>
+    <pre id="response"></pre>
+  </div>
+
+  <script>
+    async function sendRequest() {
+      const url = document.getElementById('url').value;
+      const method = document.getElementById('method').value;
+      const body = document.getElementById('body').value;
+
+      const options = {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      };
+
+      if (method === 'POST' && body) {
+        options.body = body;
+      }
+
+      await fetch(url, options)
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        })
+        .catch(error => {
+          document.getElementById('response').textContent = `Error: ${error.message}`;
+        });
+    }
+  </script>
+</body>
+</html>
