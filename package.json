@@ -20,6 +20,7 @@
   "homepage": "https://github.com/Tan01010/starship-data#readme",
   "dependencies": {
     "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
     "express": "^5.1.0"
   }
 }

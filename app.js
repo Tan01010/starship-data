@@ -1,93 +1,90 @@
-// app.js
-
 const express = require('express');
+const cors = require('cors');
 const bodyParser = require('body-parser');
-const fs = require('fs');
-const { Auth, authMiddleware } = require('./Auth.js');
-
+const Auth = require('./Auth');
 const app = express();
-const port = 3000;
-const dbFile = 'database.json';
+const PORT = 3000;
 
+const auth = new Auth('./database.json');
+
+app.use(cors());
 app.use(bodyParser.json());
 
-// Initialize empty database if it doesn't exist
-if (!fs.existsSync(dbFile)) {
-  fs.writeFileSync(dbFile, JSON.stringify({ users: [] }, null, 2));
+// LOGIN
+app.post('/api/login', (req, res) => {
+  const { username, sc } = req.body;
+  const result = auth.authenticate(username, sc);
+  if (result) {
+    res.status(200).json({ message: 'Authenticated', token: result.token, data: result.user.data });
+  } else {
+    res.status(401).json({ message: 'Invalid credentials' });
+  }
+});
+
+// MIDDLEWARE: Auth
+function requireAuth(req, res, next) {
+  const token = req.headers.authorization;
+  const username = auth.validateToken(token);
+  if (!username) return res.status(401).json({ message: 'Unauthorized' });
+  req.username = username;
+  next();
 }
 
-// Routes
-
-// Login route (optional, since we're using headers for authentication)
-app.post('/login', (req, res) => {
-  const { name, sc } = req.body;
-  if (!name || !sc) {
-    return res.status(400).json({ error: 'Missing credentials' });
-  }
-
-  const auth = new Auth(name, sc);
-  if (!auth.isAuthenticated()) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
-
-  res.json({ success: true });
+// READ ALL DATA
+app.get('/api/data', requireAuth, (req, res) => {
+  const data = auth.getUserData(req.username);
+  res.json(data);
 });
 
-// Apply authentication middleware to all routes below
-app.use(authMiddleware);
-
-// Read ALL data
-app.get('/read/all', (req, res) => {
-  try {
-    const data = req.auth.getData();
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+// READ ONE ITEM
+app.get('/api/data/:key', requireAuth, (req, res) => {
+  const data = auth.getUserData(req.username);
+  const item = data[req.params.key];
+  if (item !== undefined) {
+    res.json({ [req.params.key]: item });
+  } else {
+    res.status(404).json({ message: 'Key not found' });
   }
 });
 
-// Read ONE key
-app.get('/read/one/:key', (req, res) => {
-  try {
-    const data = req.auth.getData();
-    const key = req.params.key;
-    if (data[key] === undefined) {
-      return res.status(404).json({ error: 'Key not found' });
-    }
-    res.json({ key, value: data[key] });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Create & Update
-app.post('/api/data', (req, res) => {
+// CREATE NEW ITEM
+app.post('/api/data/item', requireAuth, (req, res) => {
   const { key, value } = req.body;
-  if (!key || value === undefined) {
-    return res.status(400).json({ error: 'key and value are required' });
-  }
+  if (!key) return res.status(400).json({ message: 'Key is required' });
 
-  try {
-    req.auth.updateDataKey(key, value);
-    res.json({ success: true, key, value });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  const data = auth.getUserData(req.username);
+  if (data[key] !== undefined) return res.status(400).json({ message: 'Key already exists' });
+
+  data[key] = value;
+  auth.updateUserData(req.username, data);
+  res.json({ message: 'Item created', [key]: value });
 });
 
-// DELETE a key
-app.delete('/api/data/:key', (req, res) => {
+// UPDATE ITEM
+app.put('/api/data/:key', requireAuth, (req, res) => {
+  const key = req.params.key;
+  const newValue = req.body.value;
+
+  const data = auth.getUserData(req.username);
+  if (data[key] === undefined) return res.status(404).json({ message: 'Key not found' });
+
+  data[key] = newValue;
+  auth.updateUserData(req.username, data);
+  res.json({ message: 'Item updated', [key]: newValue });
+});
+
+// DELETE ITEM
+app.delete('/api/data/:key', requireAuth, (req, res) => {
   const key = req.params.key;
 
-  try {
-    req.auth.deleteDataKey(key);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  const data = auth.getUserData(req.username);
+  if (data[key] === undefined) return res.status(404).json({ message: 'Key not found' });
+
+  delete data[key];
+  auth.updateUserData(req.username, data);
+  res.json({ message: 'Item deleted', deletedKey: key });
 });
 
-// Start server
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });

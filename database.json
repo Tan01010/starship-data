@@ -3,7 +3,9 @@
     {
       "name": "starship",
       "sc": "S@f3wL$2kZ!",
-      "data": {}
+      "data": {
+        "message": "Hello world!"
+      }
     },
     {
       "name": "tan01010_personal",

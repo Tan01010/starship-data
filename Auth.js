@@ -1,101 +1,41 @@
-// Auth.js
-
 const fs = require('fs');
-
-const dbFile = 'database.json';
-
-// Helper to load the database
-function loadDB() {
-  const data = fs.readFileSync(dbFile);
-  return JSON.parse(data);
-}
-
-// Helper to save the database
-function saveDB(db) {
-  fs.writeFileSync(dbFile, JSON.stringify(db, null, 2));
-}
+const crypto = require('crypto');
 
 class Auth {
-  constructor(name, sc) {
-    this.name = name;
-    this.sc = sc;
-    this.user = null;
-    this.authenticate();
+  constructor(databasePath) {
+    this.dbPath = databasePath;
+    this.users = JSON.parse(fs.readFileSync(this.dbPath, 'utf-8')).users;
+    this.sessions = {}; // token -> username
   }
 
-  authenticate() {
-    const db = loadDB();
-    const foundUser = db.users.find(user => user.name === this.name && user.sc === this.sc);
-    if (foundUser) {
-      this.user = foundUser;
+  authenticate(username, secretCode) {
+    const user = this.users.find(u => u.name === username && u.sc === secretCode);
+    if (user) {
+      const token = crypto.randomBytes(32).toString('hex');
+      this.sessions[token] = username;
+      return { token, user };
     }
+    return null;
   }
 
-  isAuthenticated() {
-    return this.user !== null;
+  validateToken(token) {
+    return this.sessions[token] || null;
   }
 
-  getData() {
-    if (!this.isAuthenticated()) {
-      throw new Error('Not authenticated');
-    }
-    return this.user.data;
+  getUserData(username) {
+    const user = this.users.find(user => user.name === username);
+    return user ? user.data : null;
   }
 
-  setData(newData) {
-    if (!this.isAuthenticated()) {
-      throw new Error('Not authenticated');
-    }
-    const db = loadDB();
-    const userIndex = db.users.findIndex(user => user.name === this.name && user.sc === this.sc);
+  updateUserData(username, newData) {
+    const userIndex = this.users.findIndex(user => user.name === username);
     if (userIndex !== -1) {
-      db.users[userIndex].data = newData;
-      saveDB(db);
-      this.user.data = newData;
+      this.users[userIndex].data = newData;
+      fs.writeFileSync(this.dbPath, JSON.stringify({ users: this.users }, null, 2));
+      return true;
     }
-  }
-
-  updateDataKey(key, value) {
-    if (!this.isAuthenticated()) {
-      throw new Error('Not authenticated');
-    }
-    const db = loadDB();
-    const userIndex = db.users.findIndex(user => user.name === this.name && user.sc === this.sc);
-    if (userIndex !== -1) {
-      db.users[userIndex].data[key] = value;
-      saveDB(db);
-      this.user.data[key] = value;
-    }
-  }
-
-  deleteDataKey(key) {
-    if (!this.isAuthenticated()) {
-      throw new Error('Not authenticated');
-    }
-    const db = loadDB();
-    const userIndex = db.users.findIndex(user => user.name === this.name && user.sc === this.sc);
-    if (userIndex !== -1 && db.users[userIndex].data.hasOwnProperty(key)) {
-      delete db.users[userIndex].data[key];
-      saveDB(db);
-      delete this.user.data[key];
-    }
+    return false;
   }
 }
 
-// Middleware to authenticate user and attach to request
-function authMiddleware(req, res, next) {
-  const { name, sc } = req.headers;
-  if (!name || !sc) {
-    return res.status(401).json({ error: 'Missing credentials in headers' });
-  }
-
-  const auth = new Auth(name, sc);
-  if (!auth.isAuthenticated()) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
-
-  req.auth = auth;
-  next();
-}
-
-module.exports = { Auth, authMiddleware };
+module.exports = Auth;
