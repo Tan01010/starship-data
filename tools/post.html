@@ -10,24 +10,19 @@
     <script>
       async function run() {
         console.log("[BROWER] Running");
-        await fetch("http://localhost:3000/api/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: "starship", sc: "S@f3wL$2kZ!" }),
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            console.log("[BROWER] Logging in... Data: ", data);
-            localStorage.setItem("authToken", data.token);
-            console.log("Logged in, token:", data.token);
-          });
-        fetch("http://localhost:3000/api/data", {
-          headers: {
-            Authorization: localStorage.getItem("authToken"),
-          },
-        })
-          .then((res) => res.json())
-          .then(console.log);
+            // Add new data using username and sc (no token needed)
+            fetch("http://localhost:3000/api/data/message", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                username: "starship",
+                sc: "S@f3wL$2kZ!",
+                value: "Hey dataase",
+              }),
+            })
+              .then((res) => res.json())
+              .then(console.log);
+          
       }
       run().then(() => {
         console.log("[BROWER] All done!");

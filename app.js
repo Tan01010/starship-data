@@ -10,9 +10,11 @@ const auth = new Auth('./database.json');
 app.use(cors());
 app.use(bodyParser.json());
 
-// LOGIN
+// LOGIN (returns token)
 app.post('/api/login', (req, res) => {
   const { username, sc } = req.body;
+  
+  // Authenticate user by username and secret code
   const result = auth.authenticate(username, sc);
   if (result) {
     res.status(200).json({ message: 'Authenticated', token: result.token, data: result.user.data });
@@ -21,11 +23,24 @@ app.post('/api/login', (req, res) => {
   }
 });
 
-// MIDDLEWARE: Auth
+// MIDDLEWARE: Auth (Check token or username and secret code)
 function requireAuth(req, res, next) {
+  let username;
+
+  // 1. Check if token is provided in headers
   const token = req.headers.authorization;
-  const username = auth.validateToken(token);
+  if (token) {
+    username = auth.validateToken(token);
+  }
+  
+  // 2. Otherwise, check username and secret code in body
+  if (!username) {
+    const { username: bodyUsername, sc } = req.body;
+    username = auth.authenticate(bodyUsername, sc) ? bodyUsername : null;
+  }
+
   if (!username) return res.status(401).json({ message: 'Unauthorized' });
+
   req.username = username;
   next();
 }

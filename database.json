@@ -4,7 +4,8 @@
       "name": "starship",
       "sc": "S@f3wL$2kZ!",
       "data": {
-        "message": "Hello world!"
+        "message": "Hey dataase",
+        "age": 40
       }
     },
     {
