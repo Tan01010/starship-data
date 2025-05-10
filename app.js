@@ -5,7 +5,6 @@ const Auth = require('./Auth');
 const app = express();
 const PORT = 3000;
 
-
 const auth = new Auth('./database.json');
 
 app.use(cors());
