@@ -4,8 +4,9 @@
       "name": "starship",
       "sc": "S@f3wL$2kZ!",
       "data": {
-        "message": "Hey dataase",
-        "age": 40
+        "message": "Hey database",
+        "age": 40,
+        "newKey": "Hello, world!"
       }
     },
     {
